@@ -1,6 +1,5 @@
 'use client'
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface EstacionamientoGridProps {
     metrosX: number | null;
@@ -18,6 +17,7 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
 
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [viewportDimensions, setViewportDimensions] = useState({ width: 0, height: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
     const BASE_CELL_SIZE = 40;
     const CELL_SIZE = BASE_CELL_SIZE * zoom;
@@ -26,32 +26,59 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
     const totalWidth = metrosX * CELL_SIZE;
     const totalHeight = metrosY * CELL_SIZE;
 
-    // Configurar virtualización
-    const parentRef = useRef<HTMLDivElement>(null);
+    // Actualizar dimensiones del viewport
+    useEffect(() => {
+        if (containerRef.current) {
+            const updateDimensions = () => {
+                setViewportDimensions({
+                    width: containerRef.current?.clientWidth || 0,
+                    height: containerRef.current?.clientHeight || 0,
+                });
+            };
 
-    const rowVirtualizer = useVirtualizer({
-        count: metrosY,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => CELL_SIZE,
-        overscan: 5,
-    });
+            updateDimensions();
+            window.addEventListener('resize', updateDimensions);
+            return () => window.removeEventListener('resize', updateDimensions);
+        }
+    }, []);
 
-    const columnVirtualizer = useVirtualizer({
-        count: metrosX,
-        getScrollElement: () => parentRef.current,
-        estimateSize: () => CELL_SIZE,
-        horizontal: true,
-        overscan: 5,
-    });
+    // Calcular celdas visibles
+    const getVisibleRange = useCallback(() => {
+        if (!containerRef.current) return { startX: 0, endX: 0, startY: 0, endY: 0 };
+
+        const startX = Math.max(0, Math.floor(-position.x / CELL_SIZE));
+        const endX = Math.min(metrosX, Math.ceil((-position.x + viewportDimensions.width) / CELL_SIZE));
+        const startY = Math.max(0, Math.floor(-position.y / CELL_SIZE));
+        const endY = Math.min(metrosY, Math.ceil((-position.y + viewportDimensions.height) / CELL_SIZE));
+
+        return { startX, endX, startY, endY };
+    }, [position, CELL_SIZE, metrosX, metrosY, viewportDimensions]);
 
     // Manejo del zoom
     const handleWheel = useCallback((e: React.WheelEvent) => {
         if (e.ctrlKey) {
             e.preventDefault();
+            const rect = containerRef.current?.getBoundingClientRect();
+            if (!rect) return;
+
+            // Calcular posición del cursor relativa al contenedor
+            const mouseX = e.clientX - rect.left - position.x;
+            const mouseY = e.clientY - rect.top - position.y;
+
+            // Calcular nuevo zoom
             const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setZoom(prev => Math.min(Math.max(0.1, prev * delta), 5));
+            const newZoom = Math.min(Math.max(0.1, zoom * delta), 5);
+
+            // Ajustar posición para mantener el punto bajo el cursor
+            const newPosition = {
+                x: position.x - (mouseX * (delta - 1)),
+                y: position.y - (mouseY * (delta - 1)),
+            };
+
+            setZoom(newZoom);
+            setPosition(newPosition);
         }
-    }, []);
+    }, [zoom, position]);
 
     // Manejo del drag
     const [isDragging, setIsDragging] = useState(false);
@@ -67,9 +94,16 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isDragging) {
+            const newX = e.clientX - dragStart.x;
+            const newY = e.clientY - dragStart.y;
+
+            // Limitar el movimiento dentro de los límites
+            const minX = -totalWidth + viewportDimensions.width;
+            const minY = -totalHeight + viewportDimensions.height;
+
             setPosition({
-                x: e.clientX - dragStart.x,
-                y: e.clientY - dragStart.y,
+                x: Math.min(0, Math.max(minX, newX)),
+                y: Math.min(0, Math.max(minY, newY)),
             });
         }
     };
@@ -78,62 +112,51 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
         setIsDragging(false);
     };
 
-    // Renderizar solo las celdas visibles
-    const visibleCells = React.useMemo(() => {
-        const cells = [];
-        for (const virtualRow of rowVirtualizer.getVirtualItems()) {
-            for (const virtualCol of columnVirtualizer.getVirtualItems()) {
-                cells.push(
-                    <div
-                        key={`${virtualRow.index}-${virtualCol.index}`}
-                        className="bg-white border border-gray-200"
-                        style={{
-                            position: 'absolute',
-                            top: virtualRow.start,
-                            left: virtualCol.start,
-                            width: CELL_SIZE,
-                            height: CELL_SIZE,
-                        }}
-                    />
-                );
-            }
+    // Renderizar celdas
+    const visibleRange = getVisibleRange();
+    const cells = [];
+
+    for (let y = visibleRange.startY; y < visibleRange.endY; y++) {
+        for (let x = visibleRange.startX; x < visibleRange.endX; x++) {
+            cells.push(
+                <div
+                    key={`${y}-${x}`}
+                    className="absolute bg-white border border-gray-200"
+                    style={{
+                        left: x * CELL_SIZE,
+                        top: y * CELL_SIZE,
+                        width: CELL_SIZE,
+                        height: CELL_SIZE,
+                    }}
+                />
+            );
         }
-        return cells;
-    }, [rowVirtualizer.getVirtualItems(), columnVirtualizer.getVirtualItems(), CELL_SIZE]);
+    }
 
     return (
         <div 
-        ref={containerRef}
-        className="w-full h-[85%] relative overflow-hidden"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-    >
+            ref={containerRef}
+            className="w-full h-[85%] relative overflow-hidden"
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+        >
             <div
-                ref={parentRef}
-                className="absolute overflow-auto"
+                className="absolute"
                 style={{
-                    width: '100%',
-                    height: '100%',
+                    width: totalWidth,
+                    height: totalHeight,
+                    transform: `translate(${position.x}px, ${position.y}px)`,
                     cursor: isDragging ? 'grabbing' : 'grab',
                 }}
             >
-                <div
-                    style={{
-                        width: totalWidth,
-                        height: totalHeight,
-                        position: 'relative',
-                        transform: `translate(${position.x}px, ${position.y}px)`,
-                    }}
-                >
-                    {visibleCells}
-                </div>
+                {cells}
             </div>
-            
+
             {/* Controles de zoom */}
-            <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-2">
+            <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-2 z-10">
                 <button 
                     className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded"
                     onClick={() => setZoom(prev => Math.min(prev * 1.1, 5))}
