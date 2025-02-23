@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   const isHomePage = request.nextUrl.pathname === "/";
 
   if (session?.user && isHomePage) {
-    return NextResponse.redirect(new URL("/editor/chatlist", request.url));
+    return NextResponse.redirect(new URL("/editor/map", request.url));
   }
 
   return NextResponse.next();

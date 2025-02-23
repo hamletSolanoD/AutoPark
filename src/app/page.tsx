@@ -1,7 +1,6 @@
 // app/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { LatestPost } from "~/app/_components/post";
 import { auth } from "~/server/auth";
 import { api, HydrateClient } from "~/trpc/server";
 
@@ -9,10 +8,6 @@ export default async function Home() {
   const hello = await api.post.hello({ text: "from tRPC" });
   const session = await auth();
 
-  // Redirección del lado del servidor
-  if (session?.user) {
-    redirect("/editor/chatlist");
-  }
 
   return (
     <HydrateClient>
@@ -21,7 +16,6 @@ export default async function Home() {
           <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
             Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
           </h1>
-          {/* ... resto de tu código ... */}
           
           <div className="flex flex-col items-center gap-2">
             <p className="text-2xl text-white">

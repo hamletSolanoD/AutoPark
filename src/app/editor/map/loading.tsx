@@ -1,4 +1,3 @@
-// app/editor/chatlist/loading.tsx
 import React from 'react';
 
 export default function LoadingChatList() {  // Debe ser una función que retorne JSX

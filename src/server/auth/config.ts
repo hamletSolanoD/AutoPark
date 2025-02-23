@@ -54,9 +54,8 @@ export const authConfig = {
       },
     }),
     redirect: async ({ url, baseUrl }) => {
-      // Redirige al usuario a /editor/chatlist después de autenticarse
       if (url.startsWith(baseUrl)) {
-        return `${baseUrl}/editor/chatlist`;
+        return `${baseUrl}/editor/map`;
       }
       return baseUrl;
     },
