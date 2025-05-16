@@ -3,7 +3,7 @@
 import React, { createContext, useContext, ReactNode, useState } from 'react';
 import { api } from "~/trpc/react";
 
-export type ToolType = 'zoom' | 'objects' | 'eraser';
+export type ToolType = 'zoom' | 'objects' | 'eraser' | 'save';
 
 export type ObjectType = {
   id: string;
@@ -72,13 +72,19 @@ interface MapContextType {
   setObjectSearchTerm: (term: string) => void;
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
-  // Nuevas funciones para objetos colocados
+  // Funciones para objetos colocados
   placedObjects: PlacedObject[];
   setPlacedObjects: (objects: PlacedObject[]) => void;
   addPlacedObject: (object: PlacedObject) => void;
   removePlacedObject: (id: string) => void;
   previewPosition: { x: number; y: number } | null;
   setPreviewPosition: (position: { x: number; y: number } | null) => void;
+  // Funciones de guardado
+  autoSave: boolean;
+  setAutoSave: (enabled: boolean) => void;
+  saveObjects: () => Promise<void>;
+  isSaving: boolean;
+  lastSaved: Date | null;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -90,15 +96,48 @@ export function MapProvider({ children, mapId }: { children: ReactNode; mapId: n
     { enabled: !!mapId }
   );
 
+  // Cargar objetos colocados
+  const { data: loadedObjects } = api.zonaEstacionamiento.getObjects.useQuery(
+    { id: mapId },
+    { enabled: !!mapId }
+  );
+
+  // Mutación para guardar objetos
+  const saveObjectsMutation = api.zonaEstacionamiento.saveObjects.useMutation();
+
   // Estado de herramientas
   const [selectedTool, setSelectedTool] = useState<ToolType>('objects');
   const [selectedObject, setSelectedObject] = useState<ObjectType | undefined>(AVAILABLE_OBJECTS[0]);
   const [objectSearchTerm, setObjectSearchTerm] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
   
-  // Nuevo estado para objetos colocados
+  // Estado para objetos colocados
   const [placedObjects, setPlacedObjects] = useState<PlacedObject[]>([]);
   const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // Estado de guardado
+  const [autoSave, setAutoSave] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Cargar objetos cuando se obtienen del servidor
+  React.useEffect(() => {
+    if (loadedObjects && Array.isArray(loadedObjects)) {
+      setPlacedObjects(loadedObjects);
+    }
+  }, [loadedObjects]);
+
+  // Auto guardado cada 5 minutos
+  React.useEffect(() => {
+    if (!autoSave) return;
+
+    const interval = setInterval(() => {
+      if (placedObjects.length > 0) {
+        saveObjects();
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+
+    return () => clearInterval(interval);
+  }, [autoSave, placedObjects]);
 
   // Funciones para manejar objetos colocados
   const addPlacedObject = (object: PlacedObject) => {
@@ -107,6 +146,19 @@ export function MapProvider({ children, mapId }: { children: ReactNode; mapId: n
 
   const removePlacedObject = (id: string) => {
     setPlacedObjects(prev => prev.filter(obj => obj.id !== id));
+  };
+
+  // Función para guardar objetos
+  const saveObjects = async () => {
+    try {
+      await saveObjectsMutation.mutateAsync({
+        id: mapId,
+        placedObjects,
+      });
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error('Error guardando objetos:', error);
+    }
   };
 
   let map = currentMap || {
@@ -139,6 +191,11 @@ export function MapProvider({ children, mapId }: { children: ReactNode; mapId: n
     removePlacedObject,
     previewPosition,
     setPreviewPosition,
+    autoSave,
+    setAutoSave,
+    saveObjects,
+    isSaving: saveObjectsMutation.isLoading,
+    lastSaved,
   };
 
   return (

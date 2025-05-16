@@ -5,8 +5,10 @@ import { useViewport } from '~/hooks/EstacionamientoGrid/useViewport';
 import { useVisibleCells } from '~/hooks/EstacionamientoGrid/useVisibleCells';
 import { useZoom } from '~/hooks/EstacionamientoGrid/useZoom';
 import { useMapContext } from '../MapProvider';
-import { PlacedObjectComponent } from './newObjects/PlacedObjectComponent';
+import { SaveIndicator } from '../sidebar/ObjectSelector/SaveIndicator';
 import { ObjectPreview } from './newObjects/ObjectPreview';
+import { PlacedObjectComponent } from './newObjects/PlacedObjectComponent';
+
 
 export function EstacionamientoGrid() {
     const {
@@ -208,6 +210,8 @@ export function EstacionamientoGrid() {
                     />
                 )}
             </div>
+
+            <SaveIndicator />
         </div>
     );
 }

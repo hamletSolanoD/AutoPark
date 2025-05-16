@@ -3,11 +3,13 @@ import React from 'react';
 import { 
   MagnifyingGlassIcon, 
   Squares2X2Icon, 
-  TrashIcon 
+  TrashIcon,
+  CloudArrowUpIcon 
 } from '@heroicons/react/24/outline';
+import { ToolType, useMapContext } from '../MapProvider';
 import { EraserTool } from './EreaserTool';
 import { ObjectSelector } from './ObjectSelector/ObjectSelector';
-import { ToolType, useMapContext } from '../MapProvider';
+import { SaveTools } from './ObjectSelector/saveTools';
 import { ZoomTools } from './ZoomTools';
 
 
@@ -29,6 +31,12 @@ const TOOLS = [
     name: 'Borrador',
     icon: TrashIcon,
     description: 'Eliminar objetos'
+  },
+  {
+    id: 'save' as ToolType,
+    name: 'Guardar',
+    icon: CloudArrowUpIcon,
+    description: 'Guardar y configurar auto-guardado'
   }
 ];
 
@@ -43,6 +51,8 @@ export function Sidebar() {
         return <ObjectSelector />;
       case 'eraser':
         return <EraserTool />;
+      case 'save':
+        return <SaveTools />;
       default:
         return null;
     }
@@ -55,7 +65,7 @@ export function Sidebar() {
           Herramientas
         </h2>
         
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {TOOLS.map((tool) => (
             <button
               key={tool.id}
