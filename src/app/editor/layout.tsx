@@ -16,13 +16,12 @@ export default async function EditorLayout({
   }
 
   return (
-    <div className="flex h-screen">
-      
-
-
+    <div className="flex h-screen overflow-hidden">
       <div className="flex flex-col flex-1">
         <Topbar user={session.user} />
-        <main className="flex-1 p-4 bg-gray-100">{children}</main>
+        <main className="flex-1 p-4 bg-gray-100 min-h-0 overflow-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );

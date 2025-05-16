@@ -63,6 +63,7 @@ model User {
     accounts      Account[]
     sessions      Session[]
     posts         Post[]
+    zonasEstacionamiento ZonaEstacionamiento[]
 }
 
 model VerificationToken {
@@ -71,4 +72,18 @@ model VerificationToken {
     expires    DateTime
 
     @@unique([identifier, token])
+}
+
+model ZonaEstacionamiento {
+    id                    Int      @id @default(autoincrement())
+    metrosX               Float    // Metros en el eje X
+    metrosY               Float    // Metros en el eje Y
+    nombreDeArea          String
+    numeroEstacionamientos Int
+    createdAt             DateTime @default(now())
+    updatedAt             DateTime @updatedAt
+
+    // Relación con el usuario que crea la zona
+    createdBy            User     @relation(fields: [createdById], references: [id])
+    createdById          String
 }
