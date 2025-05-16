@@ -1,10 +1,10 @@
 'use client'
 import React, { useRef } from 'react';
-import { Minimap } from './MinimapComponent';
 import { useDrag } from '~/hooks/EstacionamientoGrid/useDrag';
 import { useViewport } from '~/hooks/EstacionamientoGrid/useViewport';
 import { useVisibleCells } from '~/hooks/EstacionamientoGrid/useVisibleCells';
 import { useZoom } from '~/hooks/EstacionamientoGrid/useZoom';
+import { Minimap } from './MinimapComponent';
 
 interface EstacionamientoGridProps {
     metrosX: number | null;

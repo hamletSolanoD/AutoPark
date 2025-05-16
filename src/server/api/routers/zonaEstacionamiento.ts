@@ -1,3 +1,4 @@
+// server/api/routers/zonaEstacionamiento.ts
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
@@ -26,6 +27,7 @@ export const zonaEstacionamientoRouter = createTRPCRouter({
 
   getAll: protectedProcedure.query(({ ctx }) => {
     return ctx.db.zonaEstacionamiento.findMany({
+      where: { createdById: ctx.session.user.id },
       orderBy: { createdAt: "desc" },
     });
   }),
@@ -33,8 +35,11 @@ export const zonaEstacionamientoRouter = createTRPCRouter({
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(({ ctx, input }) => {
-      return ctx.db.zonaEstacionamiento.findUnique({
-        where: { id: input.id },
+      return ctx.db.zonaEstacionamiento.findFirst({
+        where: { 
+          id: input.id,
+          createdById: ctx.session.user.id 
+        },
       });
     }),
 
