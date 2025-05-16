@@ -1,8 +1,8 @@
 // app/editor/map/[id]/page.tsx
 'use client'
 import React from 'react';
-import { useMapContext } from './_components/MapProvider';
-import { EstacionamientoGrid } from './_components/EstacionamientoGrid';
+import { useMapContext } from './_components/MapViewer/MapProvider';
+import { EstacionamientoGrid } from './_components/MapViewer/EstacionamientoGrid';
 
 export default function MapPage() {
   const { mapId, currentMap, isLoading } = useMapContext();

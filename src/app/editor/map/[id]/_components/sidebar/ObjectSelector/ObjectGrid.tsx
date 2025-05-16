@@ -1,7 +1,7 @@
 // app/editor/map/_components/ObjectGrid.tsx
 'use client'
 import React from 'react';
-import { AVAILABLE_OBJECTS, ObjectType, useMapContext } from '../../MapProvider';
+import { AVAILABLE_OBJECTS, ObjectType, useMapContext } from '../../MapViewer/MapProvider';
 
 export function ObjectGrid() {
   const { selectedObject, setSelectedObject, objectSearchTerm } = useMapContext();

@@ -7,7 +7,7 @@ import { api } from "~/trpc/react";
 
 import { useRouter } from 'next/navigation';
 import { CreateZonaModal } from './CreateZonaModal';
-import { useMapContext } from '../[id]/_components/MapProvider';
+import { useMapContext } from '../[id]/_components/MapViewer/MapProvider';
 
 
 export function EstacionamientoDropdown({ 

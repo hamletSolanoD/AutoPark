@@ -6,10 +6,10 @@ import {
   Squares2X2Icon, 
   TrashIcon 
 } from '@heroicons/react/24/outline';
-import { ToolType, useMapContext } from '../MapProvider';
+import { ToolType, useMapContext } from '../MapViewer/MapProvider';
 import { EraserTool } from './EreaserTool';
 import { ObjectSelector } from './ObjectSelector/ObjectSelector';
-import { ZoomTools } from './ZppTools';
+import { ZoomTools } from './ZoomTools';
 
 const TOOLS = [
   {

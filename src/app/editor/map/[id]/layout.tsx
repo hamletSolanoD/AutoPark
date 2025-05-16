@@ -3,7 +3,7 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeftIcon, MapIcon } from '@heroicons/react/24/outline';
-import { useMapContext, MapProvider } from './_components/MapProvider';
+import { useMapContext, MapProvider } from './_components/MapViewer/MapProvider';
 import { Sidebar } from './_components/sidebar/SideBar';
 
 // Componente interno para usar el contexto
