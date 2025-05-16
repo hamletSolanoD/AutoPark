@@ -14,6 +14,14 @@ export type ObjectType = {
   color: string;
 };
 
+export interface PlacedObject {
+  id: string;
+  objectType: ObjectType;
+  x: number;
+  y: number;
+  rotation?: number;
+}
+
 export const AVAILABLE_OBJECTS: ObjectType[] = [
   {
     id: 'estacionamiento',
@@ -64,6 +72,13 @@ interface MapContextType {
   setObjectSearchTerm: (term: string) => void;
   zoomLevel: number;
   setZoomLevel: (zoom: number) => void;
+  // Nuevas funciones para objetos colocados
+  placedObjects: PlacedObject[];
+  setPlacedObjects: (objects: PlacedObject[]) => void;
+  addPlacedObject: (object: PlacedObject) => void;
+  removePlacedObject: (id: string) => void;
+  previewPosition: { x: number; y: number } | null;
+  setPreviewPosition: (position: { x: number; y: number } | null) => void;
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined);
@@ -80,19 +95,34 @@ export function MapProvider({ children, mapId }: { children: ReactNode; mapId: n
   const [selectedObject, setSelectedObject] = useState<ObjectType | undefined>(AVAILABLE_OBJECTS[0]);
   const [objectSearchTerm, setObjectSearchTerm] = useState('');
   const [zoomLevel, setZoomLevel] = useState(1);
- let map = currentMap || {
-        id: mapId,
-        nombreDeArea: 'Cargando...',
-        metrosX: 10,
-        metrosY: 10,
-        numeroEstacionamientos: 100,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        createdById: '',
-    };
+  
+  // Nuevo estado para objetos colocados
+  const [placedObjects, setPlacedObjects] = useState<PlacedObject[]>([]);
+  const [previewPosition, setPreviewPosition] = useState<{ x: number; y: number } | null>(null);
+
+  // Funciones para manejar objetos colocados
+  const addPlacedObject = (object: PlacedObject) => {
+    setPlacedObjects(prev => [...prev, object]);
+  };
+
+  const removePlacedObject = (id: string) => {
+    setPlacedObjects(prev => prev.filter(obj => obj.id !== id));
+  };
+
+  let map = currentMap || {
+    id: mapId,
+    nombreDeArea: 'Cargando...',
+    metrosX: 10,
+    metrosY: 10,
+    numeroEstacionamientos: 100,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    createdById: '',
+  };
+
   const value: MapContextType = {
     mapId,
-    currentMap:map,
+    currentMap: map,
     isLoading,
     error,
     selectedTool,
@@ -103,6 +133,12 @@ export function MapProvider({ children, mapId }: { children: ReactNode; mapId: n
     setObjectSearchTerm,
     zoomLevel,
     setZoomLevel,
+    placedObjects,
+    setPlacedObjects,
+    addPlacedObject,
+    removePlacedObject,
+    previewPosition,
+    setPreviewPosition,
   };
 
   return (

@@ -2,7 +2,7 @@
 'use client'
 import React from 'react';
 import { ObjectSearchBar } from './ObjectSearchBar';
-import { useMapContext } from '../../MapViewer/MapProvider';
+import { useMapContext } from '../../MapProvider';
 import { ObjectGrid } from './ObjectGrid';
 
 export function ObjectSelector() {

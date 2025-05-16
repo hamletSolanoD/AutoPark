@@ -1,7 +1,7 @@
 'use client'
 import React from 'react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useMapContext } from '../../MapViewer/MapProvider';
+import { useMapContext } from '../../MapProvider';
 
 export function ObjectSearchBar() {
   const { objectSearchTerm, setObjectSearchTerm } = useMapContext();

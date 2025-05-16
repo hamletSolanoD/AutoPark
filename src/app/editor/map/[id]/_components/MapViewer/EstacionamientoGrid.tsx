@@ -1,17 +1,30 @@
 'use client'
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useDrag } from '~/hooks/EstacionamientoGrid/useDrag';
 import { useViewport } from '~/hooks/EstacionamientoGrid/useViewport';
 import { useVisibleCells } from '~/hooks/EstacionamientoGrid/useVisibleCells';
 import { useZoom } from '~/hooks/EstacionamientoGrid/useZoom';
-import { Minimap } from './MinimapComponent';
+import { useMapContext } from '../MapProvider';
+import { PlacedObjectComponent } from './newObjects/PlacedObjectComponent';
+import { ObjectPreview } from './newObjects/ObjectPreview';
 
-interface EstacionamientoGridProps {
-    metrosX: number | null;
-    metrosY: number | null;
-}
-export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridProps) {
-    if (!metrosX || !metrosY) {
+export function EstacionamientoGrid() {
+    const {
+        currentMap,
+        selectedTool,
+        selectedObject,
+        zoomLevel,
+        setZoomLevel,
+        placedObjects,
+        addPlacedObject,
+        removePlacedObject,
+        previewPosition,
+        setPreviewPosition,
+    } = useMapContext();
+
+    const [hoveredObjectId, setHoveredObjectId] = useState<string | null>(null);
+
+    if (!currentMap || !currentMap.metrosX || !currentMap.metrosY) {
         return (
             <div className="flex h-full items-center justify-center text-gray-500">
                 Selecciona un estacionamiento para ver la cuadrícula
@@ -19,12 +32,13 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
         );
     }
 
+    const { metrosX, metrosY } = currentMap;
     const containerRef = useRef<HTMLDivElement>(null);
     const BASE_CELL_SIZE = 40;
 
     const viewportDimensions = useViewport(containerRef);
-    const { zoom, setZoom, position, setPosition, handleWheel } = useZoom(containerRef);
-    const CELL_SIZE = BASE_CELL_SIZE * zoom;
+    const { position, setPosition, handleWheel } = useZoom(containerRef, zoomLevel, setZoomLevel);
+    const CELL_SIZE = BASE_CELL_SIZE * zoomLevel;
 
     const totalWidth = metrosX * CELL_SIZE;
     const totalHeight = metrosY * CELL_SIZE;
@@ -40,7 +54,90 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
     const getVisibleRange = useVisibleCells(position, CELL_SIZE, metrosX, metrosY, viewportDimensions);
     const visibleRange = getVisibleRange();
 
-    // Renderizar celdas
+    const getGridCoordinates = useCallback((clientX: number, clientY: number) => {
+        if (!containerRef.current) return null;
+        
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = clientX - rect.left - position.x;
+        const y = clientY - rect.top - position.y;
+        
+        const gridX = Math.floor(x / CELL_SIZE);
+        const gridY = Math.floor(y / CELL_SIZE);
+        
+        return { x: gridX, y: gridY };
+    }, [CELL_SIZE, position]);
+
+    const isValidPosition = useCallback((x: number, y: number, object: any) => {
+        if (x < 0 || y < 0 || x + object.width > metrosX || y + object.height > metrosY) {
+            return false;
+        }
+
+        for (const placedObj of placedObjects) {
+            const { objectType, x: px, y: py } = placedObj;
+            if (!(x + object.width <= px || px + objectType.width <= x || 
+                  y + object.height <= py || py + objectType.height <= y)) {
+                return false;
+            }
+        }
+        return true;
+    }, [metrosX, metrosY, placedObjects]);
+
+    const handleGridMouseMove = useCallback((e: React.MouseEvent) => {
+        handleMouseMove(e);
+        
+        if (selectedTool === 'objects' && selectedObject) {
+            const coords = getGridCoordinates(e.clientX, e.clientY);
+            setPreviewPosition(coords);
+        } else {
+            setPreviewPosition(null);
+        }
+    }, [selectedTool, selectedObject, getGridCoordinates, setPreviewPosition, handleMouseMove]);
+
+    const handleGridMouseLeave = useCallback(() => {
+        handleMouseUp();
+        setPreviewPosition(null);
+        setHoveredObjectId(null);
+    }, [handleMouseUp, setPreviewPosition]);
+
+    const handleGridClick = useCallback((e: React.MouseEvent) => {
+        if (isDragging) return;
+
+        const coords = getGridCoordinates(e.clientX, e.clientY);
+        if (!coords) return;
+
+        if (selectedTool === 'objects' && selectedObject) {
+            if (isValidPosition(coords.x, coords.y, selectedObject)) {
+                const newObject = {
+                    id: `${selectedObject.id}-${Date.now()}-${Math.random()}`,
+                    objectType: selectedObject,
+                    x: coords.x,
+                    y: coords.y,
+                };
+                addPlacedObject(newObject);
+            }
+        } else if (selectedTool === 'eraser') {
+            const clickedObject = placedObjects.find(obj => {
+                const { objectType, x, y } = obj;
+                return coords.x >= x && coords.x < x + objectType.width &&
+                       coords.y >= y && coords.y < y + objectType.height;
+            });
+            
+            if (clickedObject) {
+                removePlacedObject(clickedObject.id);
+            }
+        }
+    }, [selectedTool, selectedObject, isValidPosition, addPlacedObject, removePlacedObject, placedObjects, getGridCoordinates, isDragging]);
+
+    const handleObjectMouseEnter = useCallback((id: string) => {
+        if (selectedTool === 'eraser') {
+            setHoveredObjectId(id);
+        }
+    }, [selectedTool]);
+
+    const handleObjectMouseLeave = useCallback(() => {
+        setHoveredObjectId(null);
+    }, []);
+
     const cells = [];
     for (let y = visibleRange.startY; y < visibleRange.endY; y++) {
         for (let x = visibleRange.startX; x < visibleRange.endX; x++) {
@@ -59,35 +156,24 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
         }
     }
 
-    const handleMinimapClick = (x: number, y: number) => {
-        const minimapScale = Math.min(
-            200 / (metrosX * BASE_CELL_SIZE),
-            200 / (metrosY * BASE_CELL_SIZE)
-        );
-
-        // Convertir las coordenadas del minimapa a coordenadas del grid principal
-        const newX = -(x / minimapScale * (CELL_SIZE / BASE_CELL_SIZE));
-        const newY = -(y / minimapScale * (CELL_SIZE / BASE_CELL_SIZE));
-
-        // Ajustar la posición considerando los límites
-        const minX = -totalWidth + viewportDimensions.width;
-        const minY = -totalHeight + viewportDimensions.height;
-
-        setPosition({
-            x: Math.min(0, Math.max(minX, newX)),
-            y: Math.min(0, Math.max(minY, newY)),
-        });
+    const getCursor = () => {
+        if (isDragging) return 'grabbing';
+        if (selectedTool === 'eraser') return 'pointer';
+        if (selectedTool === 'objects' && selectedObject) return 'crosshair';
+        return 'grab';
     };
 
     return (
         <div
             ref={containerRef}
             className="w-full h-[85%] relative overflow-hidden"
+            style={{ cursor: getCursor() }}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
+            onMouseMove={handleGridMouseMove}
             onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+            onMouseLeave={handleGridMouseLeave}
+            onClick={handleGridClick}
         >
             <div
                 className="absolute"
@@ -95,38 +181,32 @@ export function EstacionamientoGrid({ metrosX, metrosY }: EstacionamientoGridPro
                     width: totalWidth,
                     height: totalHeight,
                     transform: `translate(${position.x}px, ${position.y}px)`,
-                    cursor: isDragging ? 'grabbing' : 'grab',
                 }}
             >
                 {cells}
-            </div>
+                
+                {placedObjects.map((placedObject) => (
+                    <PlacedObjectComponent
+                        key={placedObject.id}
+                        placedObject={placedObject}
+                        cellSize={CELL_SIZE}
+                        onClick={selectedTool === 'eraser' ? removePlacedObject : undefined}
+                        isHovered={hoveredObjectId === placedObject.id}
+                        showDeleteOverlay={selectedTool === 'eraser'}
+                        onMouseEnter={() => handleObjectMouseEnter(placedObject.id)}
+                        onMouseLeave={handleObjectMouseLeave}
+                    />
+                ))}
 
-            <Minimap
-                metrosX={metrosX}
-                metrosY={metrosY}
-                position={position}
-                viewportDimensions={viewportDimensions}
-                totalWidth={totalWidth}
-                totalHeight={totalHeight}
-                BASE_CELL_SIZE={BASE_CELL_SIZE}
-                onMinimapClick={handleMinimapClick}
-            />
-
-            {/* Controles de zoom */}
-            <div className="absolute bottom-4 right-4 bg-white rounded-lg shadow-lg p-2 z-10">
-                <button
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                    onClick={() => setZoom(prev => Math.min(prev * 1.1, 5))}
-                >
-                    +
-                </button>
-                <span className="mx-2">{Math.round(zoom * 100)}%</span>
-                <button
-                    className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded"
-                    onClick={() => setZoom(prev => Math.max(prev * 0.9, 0.1))}
-                >
-                    -
-                </button>
+                {selectedTool === 'objects' && selectedObject && previewPosition && (
+                    <ObjectPreview
+                        object={selectedObject}
+                        x={previewPosition.x}
+                        y={previewPosition.y}
+                        cellSize={CELL_SIZE}
+                        isValid={isValidPosition(previewPosition.x, previewPosition.y, selectedObject)}
+                    />
+                )}
             </div>
         </div>
     );

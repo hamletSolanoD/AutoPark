@@ -5,7 +5,7 @@ import {
   MagnifyingGlassMinusIcon,
   ArrowsPointingOutIcon 
 } from '@heroicons/react/24/outline';
-import { useMapContext } from '../MapViewer/MapProvider';
+import { useMapContext } from '../MapProvider';
 
 export function ZoomTools() {
   const { zoomLevel, setZoomLevel } = useMapContext();

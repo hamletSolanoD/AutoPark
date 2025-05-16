@@ -1,15 +1,15 @@
 'use client'
 import React from 'react';
-
 import { 
   MagnifyingGlassIcon, 
   Squares2X2Icon, 
   TrashIcon 
 } from '@heroicons/react/24/outline';
-import { ToolType, useMapContext } from '../MapViewer/MapProvider';
 import { EraserTool } from './EreaserTool';
 import { ObjectSelector } from './ObjectSelector/ObjectSelector';
+import { ToolType, useMapContext } from '../MapProvider';
 import { ZoomTools } from './ZoomTools';
+
 
 const TOOLS = [
   {
@@ -50,13 +50,11 @@ export function Sidebar() {
 
   return (
     <div className="w-80 bg-white border-l border-gray-200 shadow-lg flex flex-col h-full">
-      {/* Header de herramientas */}
       <div className="p-4 border-b border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Herramientas
         </h2>
         
-        {/* Botones de herramientas */}
         <div className="grid grid-cols-3 gap-2">
           {TOOLS.map((tool) => (
             <button
@@ -76,7 +74,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Contenido de la herramienta seleccionada */}
       <div className="flex-1 overflow-y-auto">
         {renderToolContent()}
       </div>
