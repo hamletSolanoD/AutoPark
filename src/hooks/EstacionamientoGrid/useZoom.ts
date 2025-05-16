@@ -5,7 +5,7 @@ interface Position {
     y: number;
 }
 
-export function useZoom(containerRef: RefObject<HTMLDivElement>) {
+export function useZoom(containerRef: RefObject<HTMLDivElement>, zoomLevel: number, setZoomLevel: (zoom: number) => void) {
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState<Position>({ x: 0, y: 0 });
 
